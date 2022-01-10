@@ -100,13 +100,11 @@ public class v1_14_R1 extends VersionSupport {
             }
         }
         if (subtitle != null) {
-            if (!subtitle.isEmpty()) {
-                IChatBaseComponent bc = IChatBaseComponent.ChatSerializer.a("{\"text\": \"" + subtitle + "\"}");
-                PacketPlayOutTitle tit = new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.SUBTITLE, bc);
-                PacketPlayOutTitle length = new PacketPlayOutTitle(fadeIn, stay, fadeOut);
-                ((CraftPlayer) p).getHandle().playerConnection.sendPacket(tit);
-                ((CraftPlayer) p).getHandle().playerConnection.sendPacket(length);
-            }
+            IChatBaseComponent bc = IChatBaseComponent.ChatSerializer.a("{\"text\": \"" + subtitle + "\"}");
+            PacketPlayOutTitle tit = new PacketPlayOutTitle(PacketPlayOutTitle.EnumTitleAction.SUBTITLE, bc);
+            PacketPlayOutTitle length = new PacketPlayOutTitle(fadeIn, stay, fadeOut);
+            ((CraftPlayer) p).getHandle().playerConnection.sendPacket(tit);
+            ((CraftPlayer) p).getHandle().playerConnection.sendPacket(length);
         }
     }
 
@@ -674,5 +672,10 @@ public class v1_14_R1 extends VersionSupport {
             if (inWorld.equals(player)) continue;
             ((CraftPlayer) inWorld).getHandle().playerConnection.sendPacket(particlePacket);
         }
+    }
+
+    @Override
+    public void clearArrowsFromPlayerBody(Player player) {
+        ((CraftLivingEntity)player).getHandle().getDataWatcher().set(new DataWatcherObject<>(11, DataWatcherRegistry.b),-1);
     }
 }
