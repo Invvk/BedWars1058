@@ -812,7 +812,7 @@ public class Arena implements IArena {
                     alive_teams++;
                 }
             }
-            if (alive_teams == 1) {
+            if (alive_teams == 1 && !BedWars.isShuttingDown()) {
                 checkWinner();
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> changeStatus(GameState.restarting), 10L);
                 if (team != null) {
@@ -827,9 +827,9 @@ public class Arena implements IArena {
                         }
                     }
                 }
-            } else if (alive_teams == 0) {
+            } else if (alive_teams == 0 && !BedWars.isShuttingDown()) {
                 Bukkit.getScheduler().runTaskLater(BedWars.plugin, () -> changeStatus(GameState.restarting), 10L);
-            } else {
+            } else if(!BedWars.isShuttingDown()) {
                 //ReJoin feature
                 new ReJoin(p, this, team, cacheList);
             }
@@ -895,37 +895,39 @@ public class Arena implements IArena {
             return;
         } else {
             this.sendToMainLobby(p);
+        }
 
-            /* restore player inventory */
-            PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
-            if (pg == null) {
-                // if there is no previous backup of the inventory send lobby items if multi arena
-                if (BedWars.getServerType() == ServerType.MULTIARENA) {
-                    // Send items
-                    Arena.sendLobbyCommandItems(p);
-                }
-            } else {
-                pg.restore();
+        /* restore player inventory */
+        PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
+        if (pg == null) {
+            // if there is no previous backup of the inventory send lobby items if multi arena
+            if (BedWars.getServerType() == ServerType.MULTIARENA) {
+                // Send items
+                Arena.sendLobbyCommandItems(p);
             }
+        } else {
+            pg.restore();
         }
         playerLocation.remove(p);
         for (PotionEffect pf : p.getActivePotionEffects()) {
             p.removePotionEffect(pf.getType());
         }
 
-        Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
-            for (Player on : Bukkit.getOnlinePlayers()) {
-                if (on.equals(p)) continue;
-                if (getArenaByPlayer(on) == null) {
-                    BedWars.nms.spigotShowPlayer(p, on);
-                    BedWars.nms.spigotShowPlayer(on, p);
-                } else {
-                    BedWars.nms.spigotHidePlayer(p, on);
-                    BedWars.nms.spigotHidePlayer(on, p);
+        if(!BedWars.isShuttingDown()) {
+            Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+                for (Player on : Bukkit.getOnlinePlayers()) {
+                    if (on.equals(p)) continue;
+                    if (getArenaByPlayer(on) == null) {
+                        BedWars.nms.spigotShowPlayer(p, on);
+                        BedWars.nms.spigotShowPlayer(on, p);
+                    } else {
+                        BedWars.nms.spigotHidePlayer(p, on);
+                        BedWars.nms.spigotHidePlayer(on, p);
+                    }
                 }
-            }
-            if (!disconnect) BedWarsScoreboard.giveScoreboard(p, null, false);
-        }, 5L);
+                if (!disconnect) BedWarsScoreboard.giveScoreboard(p, null, false);
+            }, 5L);
+        }
 
         /* Remove also the party */
         if (getParty().hasParty(p)) {
@@ -1033,21 +1035,21 @@ public class Arena implements IArena {
         } else if (getServerType() == ServerType.MULTIARENA) {
             this.sendToMainLobby(p);
 
-            /* restore player inventory */
-            PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
-            if (pg == null) {
-                // if there is no previous backup of the inventory send lobby items if multi arena
-                if (BedWars.getServerType() == ServerType.MULTIARENA) {
-                    // Send items
-                    Arena.sendLobbyCommandItems(p);
-                }
-            } else {
-                pg.restore();
-            }
+        }
+        for (PotionEffect pf : p.getActivePotionEffects()) {
+            p.removePotionEffect(pf.getType());
+        }
 
-            for (PotionEffect pf : p.getActivePotionEffects()) {
-                p.removePotionEffect(pf.getType());
+        /* restore player inventory */
+        PlayerGoods pg = PlayerGoods.getPlayerGoods(p);
+        if (pg == null) {
+            // if there is no previous backup of the inventory send lobby items if multi arena
+            if (BedWars.getServerType() == ServerType.MULTIARENA) {
+                // Send items
+                Arena.sendLobbyCommandItems(p);
             }
+        } else {
+            pg.restore();
         }
         if (getServerType() == ServerType.BUNGEE) {
             Misc.moveToLobbyOrKick(p, this, true);
@@ -1055,19 +1057,21 @@ public class Arena implements IArena {
         }
         playerLocation.remove(p);
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            for (Player on : Bukkit.getOnlinePlayers()) {
-                if (on.equals(p)) continue;
-                if (getArenaByPlayer(on) == null) {
-                    BedWars.nms.spigotShowPlayer(p, on);
-                    BedWars.nms.spigotShowPlayer(on, p);
-                } else {
-                    BedWars.nms.spigotHidePlayer(p, on);
-                    BedWars.nms.spigotHidePlayer(on, p);
+        if(!BedWars.isShuttingDown()) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                for (Player on : Bukkit.getOnlinePlayers()) {
+                    if (on.equals(p)) continue;
+                    if (getArenaByPlayer(on) == null) {
+                        BedWars.nms.spigotShowPlayer(p, on);
+                        BedWars.nms.spigotShowPlayer(on, p);
+                    } else {
+                        BedWars.nms.spigotHidePlayer(p, on);
+                        BedWars.nms.spigotHidePlayer(on, p);
+                    }
                 }
-            }
-            if (!disconnect) BedWarsScoreboard.giveScoreboard(p, null, true);
-        });
+                if (!disconnect) BedWarsScoreboard.giveScoreboard(p, null, true);
+            });
+        }
 
         /* Remove also the party */
         if (getParty().hasParty(p)) {
@@ -1438,7 +1442,7 @@ public class Arena implements IArena {
         if (this.status == GameState.starting && status == GameState.waiting) {
             for (Player player : getPlayers()) {
                 Language playerLang = Language.getPlayerLanguage(player);
-                nms.sendTitle(player, playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_TITLE), playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_SUB_TITLE), 0, 40, 0);
+                nms.sendTitle(player, playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_TITLE), playerLang.m(Messages.ARENA_STATUS_START_COUNTDOWN_CANCELLED_SUB_TITLE), 0, 40, 10);
             }
         }
         this.status = status;
@@ -1844,7 +1848,7 @@ public class Arena implements IArena {
                     //noinspection deprecation
                     for (Player p : winner.getMembersCache()) {
                         if (p.getWorld().equals(getWorld())) {
-                            nms.sendTitle(p, getMsg(p, Messages.GAME_END_VICTORY_PLAYER_TITLE), null, 0, 70, 0);
+                            nms.sendTitle(p, getMsg(p, Messages.GAME_END_VICTORY_PLAYER_TITLE), null, 0, 70, 20);
                         }
                         if (!winners.toString().contains(p.getDisplayName())) {
                             winners.append(p.getDisplayName()).append(" ");
@@ -1897,7 +1901,7 @@ public class Arena implements IArena {
                         p.sendMessage(getMsg(p, Messages.GAME_END_TEAM_WON_CHAT).replace("{TeamColor}", winner.getColor().chat().toString())
                                 .replace("{TeamName}", winner.getDisplayName(Language.getPlayerLanguage(p))));
                         if (!winner.getMembers().contains(p)) {
-                            nms.sendTitle(p, getMsg(p, Messages.GAME_END_GAME_OVER_PLAYER_TITLE), null, 0, 70, 0);
+                            nms.sendTitle(p, getMsg(p, Messages.GAME_END_GAME_OVER_PLAYER_TITLE), null, 0, 70, 20);
                         }
                         for (String s : getList(p, Messages.GAME_END_TOP_PLAYER_CHAT)) {
                             String message = s.replace("{firstName}", firstName.isEmpty() ? getMsg(p, Messages.MEANING_NOBODY) : firstName).replace("{firstKills}", String.valueOf(first))

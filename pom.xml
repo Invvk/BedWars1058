@@ -7,7 +7,7 @@
     <groupId>com.andrei1058.bedwars</groupId>
     <artifactId>BedWars1058</artifactId>
     <packaging>pom</packaging>
-    <version>22.2</version>
+    <version>22.3-SNAPSHOT</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -120,11 +120,11 @@
     <distributionManagement>
         <repository>
             <id>ftp-repo</id>
-            <url>ftp://andrei1058.com/releases</url>
+            <url>ftp://andrei1058.dev/releases</url>
         </repository>
         <snapshotRepository>
             <id>ftp-repo</id>
-            <url>ftp://andrei1058.com/snapshots</url>
+            <url>ftp://andrei1058.dev/snapshots</url>
         </snapshotRepository>
     </distributionManagement>
 </project>
