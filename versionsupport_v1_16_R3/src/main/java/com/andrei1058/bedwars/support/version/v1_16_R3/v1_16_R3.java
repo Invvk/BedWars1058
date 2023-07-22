@@ -36,10 +36,12 @@ import com.mojang.datafixers.util.Pair;
 import net.minecraft.server.v1_16_R3.*;
 import org.bukkit.Color;
 import org.bukkit.Location;
-import org.bukkit.Particle;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.type.Bed;
+import org.bukkit.block.data.type.Ladder;
 import org.bukkit.block.data.type.WallSign;
 import org.bukkit.command.Command;
 import org.bukkit.craftbukkit.v1_16_R3.CraftServer;
@@ -55,8 +57,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -164,7 +166,7 @@ public class v1_16_R3 extends VersionSupport {
     public boolean isArmor(org.bukkit.inventory.ItemStack itemStack) {
         if (CraftItemStack.asNMSCopy(itemStack) == null) return false;
         if (CraftItemStack.asNMSCopy(itemStack).getItem() == null) return false;
-        return CraftItemStack.asNMSCopy(itemStack).getItem() instanceof ItemArmor;
+        return CraftItemStack.asNMSCopy(itemStack).getItem() instanceof ItemArmor || CraftItemStack.asNMSCopy(itemStack).getItem() instanceof ItemElytra;
     }
 
     @Override
@@ -279,41 +281,24 @@ public class v1_16_R3 extends VersionSupport {
     @Override
     public void hideArmor(Player victim, Player receiver) {
         List<Pair<EnumItemSlot, ItemStack>> items = new ArrayList<>();
-        List<Pair<EnumItemSlot, ItemStack>> hands = new ArrayList<>();
-        hands.add(new Pair<>(EnumItemSlot.MAINHAND, new ItemStack(net.minecraft.server.v1_16_R3.Item.getById(0))));
-        hands.add(new Pair<>(EnumItemSlot.OFFHAND, new ItemStack(net.minecraft.server.v1_16_R3.Item.getById(0))));
-
         items.add(new Pair<>(EnumItemSlot.HEAD, new ItemStack(net.minecraft.server.v1_16_R3.Item.getById(0))));
         items.add(new Pair<>(EnumItemSlot.CHEST, new ItemStack(net.minecraft.server.v1_16_R3.Item.getById(0))));
         items.add(new Pair<>(EnumItemSlot.LEGS, new ItemStack(net.minecraft.server.v1_16_R3.Item.getById(0))));
         items.add(new Pair<>(EnumItemSlot.FEET, new ItemStack(net.minecraft.server.v1_16_R3.Item.getById(0))));
         PacketPlayOutEntityEquipment packet1 = new PacketPlayOutEntityEquipment(victim.getEntityId(), items);
-        PacketPlayOutEntityEquipment packet2 = new PacketPlayOutEntityEquipment(victim.getEntityId(), hands);
         EntityPlayer pc = ((CraftPlayer) receiver).getHandle();
-        if (victim != receiver) {
-            pc.playerConnection.sendPacket(packet2);
-        }
         pc.playerConnection.sendPacket(packet1);
     }
 
     @Override
     public void showArmor(Player victim, Player receiver) {
         List<Pair<EnumItemSlot, ItemStack>> items = new ArrayList<>();
-        List<Pair<EnumItemSlot, ItemStack>> hands = new ArrayList<>();
-
-        hands.add(new Pair<>(EnumItemSlot.MAINHAND, CraftItemStack.asNMSCopy(victim.getInventory().getItemInMainHand())));
-        hands.add(new Pair<>(EnumItemSlot.OFFHAND, CraftItemStack.asNMSCopy(victim.getInventory().getItemInOffHand())));
-
         items.add(new Pair<>(EnumItemSlot.HEAD, CraftItemStack.asNMSCopy(victim.getInventory().getHelmet())));
         items.add(new Pair<>(EnumItemSlot.CHEST, CraftItemStack.asNMSCopy(victim.getInventory().getChestplate())));
         items.add(new Pair<>(EnumItemSlot.LEGS, CraftItemStack.asNMSCopy(victim.getInventory().getLeggings())));
         items.add(new Pair<>(EnumItemSlot.FEET, CraftItemStack.asNMSCopy(victim.getInventory().getBoots())));
         PacketPlayOutEntityEquipment packet1 = new PacketPlayOutEntityEquipment(victim.getEntityId(), items);
-        PacketPlayOutEntityEquipment packet2 = new PacketPlayOutEntityEquipment(victim.getEntityId(), hands);
         EntityPlayer pc = ((CraftPlayer) receiver).getHandle();
-        if (victim != receiver) {
-            pc.playerConnection.sendPacket(packet2);
-        }
         pc.playerConnection.sendPacket(packet1);
     }
 
@@ -341,12 +326,32 @@ public class v1_16_R3 extends VersionSupport {
     }
 
     @Override
-    public void registerTntWhitelist() {
+    public void registerTntWhitelist(float endStoneBlast, float glassBlast) {
         try {
             Field field = net.minecraft.server.v1_16_R3.BlockBase.class.getDeclaredField("durability");
             field.setAccessible(true);
-            field.set(Blocks.END_STONE, 12f);
-            field.set(Blocks.GLASS, 300f);
+            for (net.minecraft.server.v1_16_R3.Block glass : new net.minecraft.server.v1_16_R3.Block[]{
+                    Blocks.WHITE_STAINED_GLASS,
+                    Blocks.ORANGE_STAINED_GLASS,
+                    Blocks.MAGENTA_STAINED_GLASS,
+                    Blocks.LIGHT_BLUE_STAINED_GLASS,
+                    Blocks.YELLOW_STAINED_GLASS,
+                    Blocks.LIME_STAINED_GLASS,
+                    Blocks.PINK_STAINED_GLASS,
+                    Blocks.GRAY_STAINED_GLASS,
+                    Blocks.LIGHT_GRAY_STAINED_GLASS,
+                    Blocks.CYAN_STAINED_GLASS,
+                    Blocks.PURPLE_STAINED_GLASS,
+                    Blocks.BLUE_STAINED_GLASS,
+                    Blocks.BROWN_STAINED_GLASS,
+                    Blocks.GREEN_STAINED_GLASS,
+                    Blocks.RED_STAINED_GLASS,
+                    Blocks.BLACK_STAINED_GLASS,
+                    Blocks.GLASS,
+            }) {
+                field.set(glass, glassBlast);
+            }
+            field.set(Blocks.END_STONE, endStoneBlast);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
@@ -443,12 +448,6 @@ public class v1_16_R3 extends VersionSupport {
     }
 
     @Override
-    public void teamCollideRule(Team team) {
-        team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-        team.setCanSeeFriendlyInvisibles(true);
-    }
-
-    @Override
     public org.bukkit.Material materialFireball() {
         return org.bukkit.Material.FIRE_CHARGE;
     }
@@ -476,6 +475,26 @@ public class v1_16_R3 extends VersionSupport {
     @Override
     public org.bukkit.Material materialGoldenLeggings() {
         return org.bukkit.Material.GOLDEN_LEGGINGS;
+    }
+
+    @Override
+    public org.bukkit.Material materialNetheriteHelmet() {
+        return Material.NETHERITE_HELMET;
+    }
+
+    @Override
+    public org.bukkit.Material materialNetheriteChestPlate() {
+        return Material.NETHERITE_CHESTPLATE;
+    }
+
+    @Override
+    public org.bukkit.Material materialNetheriteLeggings() {
+        return Material.NETHERITE_LEGGINGS;
+    }
+
+    @Override
+    public org.bukkit.Material materialElytra() {
+        return Material.ELYTRA;
     }
 
     @Override
@@ -678,4 +697,41 @@ public class v1_16_R3 extends VersionSupport {
     public void clearArrowsFromPlayerBody(Player player) {
         ((CraftLivingEntity)player).getHandle().getDataWatcher().set(new DataWatcherObject<>(11, DataWatcherRegistry.b),-1);
     }
+
+    @Override
+    public void placeTowerBlocks(Block b, IArena a, TeamColor color, int x, int y,int z){
+        b.getRelative(x, y, z).setType(color.woolMaterial());
+        a.addPlacedBlock(b.getRelative(x, y, z));
+    }
+
+    @Override
+    public void placeLadder(Block b, int x, int y,int z, IArena a, int ladderdata){
+        Block block = b.getRelative(x,y,z);  //ladder block
+        block.setType(Material.LADDER);
+        Ladder ladder = (Ladder) block.getBlockData();
+        a.addPlacedBlock(block);
+        switch (ladderdata){
+            case 2:
+                ladder.setFacing(BlockFace.NORTH);
+                block.setBlockData(ladder);
+                return;
+            case 3:
+                ladder.setFacing(BlockFace.SOUTH);
+                block.setBlockData(ladder);
+                return;
+            case 4:
+                ladder.setFacing(BlockFace.WEST);
+                block.setBlockData(ladder);
+                return;
+            case 5:
+                ladder.setFacing(BlockFace.EAST);
+                block.setBlockData(ladder);
+        }
+    }
+
+    @Override
+    public void playVillagerEffect(@NotNull Player player, Location location){
+        player.spawnParticle(org.bukkit.Particle.VILLAGER_HAPPY, location, 1);
+    }
+
 }

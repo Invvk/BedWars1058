@@ -38,6 +38,7 @@ import com.andrei1058.bedwars.arena.spectator.SpectatorListeners;
 import com.andrei1058.bedwars.arena.tasks.OneTick;
 import com.andrei1058.bedwars.arena.tasks.Refresh;
 import com.andrei1058.bedwars.arena.upgrades.BaseListener;
+import com.andrei1058.bedwars.arena.upgrades.HealPoolListner;
 import com.andrei1058.bedwars.commands.bedwars.MainCommand;
 import com.andrei1058.bedwars.commands.leave.LeaveCommand;
 import com.andrei1058.bedwars.commands.party.PartyCommand;
@@ -63,6 +64,10 @@ import com.andrei1058.bedwars.maprestore.internal.InternalAdapter;
 import com.andrei1058.bedwars.money.internal.MoneyListeners;
 import com.andrei1058.bedwars.shop.ShopManager;
 import com.andrei1058.bedwars.sidebar.*;
+import com.andrei1058.bedwars.sidebar.thread.RefreshTitleTask;
+import com.andrei1058.bedwars.sidebar.thread.RefreshPlaceholdersTask;
+import com.andrei1058.bedwars.sidebar.thread.RefreshLifeTask;
+import com.andrei1058.bedwars.sidebar.thread.RefreshTabListTask;
 import com.andrei1058.bedwars.stats.StatsManager;
 import com.andrei1058.bedwars.support.citizens.CitizensListener;
 import com.andrei1058.bedwars.support.citizens.JoinNPC;
@@ -76,7 +81,6 @@ import com.andrei1058.bedwars.support.preloadedparty.PrePartyListener;
 import com.andrei1058.bedwars.support.vault.*;
 import com.andrei1058.bedwars.support.vipfeatures.VipFeatures;
 import com.andrei1058.bedwars.support.vipfeatures.VipListeners;
-import com.andrei1058.spigotutils.SpigotUpdater;
 import com.andrei1058.vipfeatures.api.IVipFeatures;
 import com.andrei1058.vipfeatures.api.MiniGameAlreadyRegistered;
 import org.bstats.bukkit.Metrics;
@@ -93,6 +97,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -114,6 +119,8 @@ public class BedWars extends JavaPlugin {
     public static StatsManager statsManager;
     public static BedWars plugin;
     public static VersionSupport nms;
+
+    public static boolean isPaper = false;
 
     private static Party party = new NoParty();
     private static Chat chat = new NoChat();
@@ -145,6 +152,13 @@ public class BedWars extends JavaPlugin {
             return;
         }
 
+        try {
+            Class.forName("com.destroystokyo.paper.PaperConfig");
+            isPaper = true;
+        } catch (ClassNotFoundException e) {
+            isPaper = false;
+        }
+
         plugin = this;
 
         /* Load version support */
@@ -165,7 +179,8 @@ public class BedWars extends JavaPlugin {
         try {
             //noinspection unchecked
             nms = (VersionSupport) supp.getConstructor(Class.forName("org.bukkit.plugin.Plugin"), String.class).newInstance(this, version);
-        } catch (InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException | ClassNotFoundException e) {
+        } catch (InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException |
+                 ClassNotFoundException e) {
             e.printStackTrace();
             serverSoftwareSupport = false;
             this.getLogger().severe("Could not load support for server version: " + version);
@@ -186,6 +201,8 @@ public class BedWars extends JavaPlugin {
         new Hindi();
         new Indonesia();
         new Portuguese();
+        new SimplifiedChinese();
+        new Turkish();
 
         config = new MainConfig(this, "config");
 
@@ -205,59 +222,20 @@ public class BedWars extends JavaPlugin {
 
         nms.registerVersionListeners();
 
-        if (Bukkit.getPluginManager().getPlugin("Enhanced-SlimeWorldManager") != null) {
-            try {
-                //noinspection rawtypes
-                Constructor constructor = Class.forName("com.andrei1058.bedwars.arena.mapreset.eswm.ESlimeAdapter").getConstructor(Plugin.class);
-                try {
-                    api.setRestoreAdapter((RestoreAdapter) constructor.newInstance(this));
-                    this.getLogger().info("Hook into Enhanced-SlimeWorldManager support!");
-                } catch (InstantiationException e) {
-                    e.printStackTrace();
-                    api.setRestoreAdapter(new InternalAdapter(this));
-                    this.getLogger().info("Failed to hook into Enhanced-SlimeWorldManager support! Using the internal reset adapter.");
-                }
-            } catch (NoSuchMethodException | ClassNotFoundException | IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                api.setRestoreAdapter(new InternalAdapter(this));
-                this.getLogger().info("Failed to hook into Enhanced-SlimeWorldManager support! Using the internal reset adapter.");
-            }
-        } else if (checkSWM()) {
-            try {
-                //noinspection rawtypes
-                Constructor constructor = Class.forName("com.andrei1058.bedwars.arena.mapreset.slime.SlimeAdapter").getConstructor(Plugin.class);
-                try {
-                    api.setRestoreAdapter((RestoreAdapter) constructor.newInstance(this));
-                    this.getLogger().info("Hook into SlimeWorldManager support!");
-                } catch (InstantiationException e) {
-                    e.printStackTrace();
-                    api.setRestoreAdapter(new InternalAdapter(this));
-                    this.getLogger().info("Failed to hook into SlimeWorldManager support! Using internal reset adapter.");
-                }
-            } catch (NoSuchMethodException | ClassNotFoundException | IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                api.setRestoreAdapter(new InternalAdapter(this));
-                this.getLogger().info("Failed to hook into SlimeWorldManager support! Using internal reset adapter.");
-            }
-        } else {
+        if (!this.handleWorldAdapter()) {
             api.setRestoreAdapter(new InternalAdapter(this));
+            getLogger().info("Using internal world restore system.");
         }
 
         /* Register commands */
         nms.registerCommand(mainCmd, new MainCommand(mainCmd));
 
-        Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (!nms.isBukkitCommandRegistered("shout")) {
-                nms.registerCommand("shout", new ShoutCommand("shout"));
-            }
-            nms.registerCommand("rejoin", new RejoinCommand("rejoin"));
-            if (!(nms.isBukkitCommandRegistered("leave") && getServerType() == ServerType.BUNGEE)) {
-                nms.registerCommand("leave", new LeaveCommand("leave"));
-            }
-            if (getServerType() != ServerType.BUNGEE && config.getBoolean(ConfigPath.GENERAL_ENABLE_PARTY_CMD)) {
-                nms.registerCommand("party", new PartyCommand("party"));
-            }
-        }, 20L);
+        // newer versions do not seem to like delayed registration of commands
+        if (nms.getVersion() >= 9) {
+            this.registerDelayedCommands();
+        } else {
+            Bukkit.getScheduler().runTaskLater(this, this::registerDelayedCommands, 20L);
+        }
 
         /* Setup plugin messaging channel */
         Bukkit.getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
@@ -296,7 +274,12 @@ public class BedWars extends JavaPlugin {
 
         // Register events
         registerEvents(new EnderPearlLanded(), new QuitAndTeleportListener(), new BreakPlace(), new DamageDeathMove(), new Inventory(), new Interact(), new RefreshGUI(), new HungerWeatherSpawn(), new CmdProcess(),
-                new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(), new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK());
+                new FireballListener(), new EggBridge(), new SpectatorListeners(), new BaseListener(), new TargetListener(), new LangListener(), new Warnings(this), new ChatAFK(), new GameEndListener());
+
+        if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_HEAL_POOL_ENABLE)) {
+            registerEvents(new HealPoolListner());
+        }
+
         if (getServerType() == ServerType.BUNGEE) {
             if (autoscale) {
                 //registerEvents(new ArenaListeners());
@@ -325,23 +308,7 @@ public class BedWars extends JavaPlugin {
         // Register setup-holograms fix
         registerEvents(new ChunkLoad());
 
-
-        /* Deprecated versions */
-        switch (version) {
-            case "v1_9_R1":
-            case "v1_9_R2":
-            case "v1_10_R1":
-            case "v1_11_R1":
-            case "v1_13_R2":
-            case "v1_14_R1":
-            case "v1_15_R1":
-            case "v1_16_R1":
-            case "v1_16_R2":
-                registerEvents(new InvisibilityPotionListener());
-                Bukkit.getScheduler().runTaskLater(this,
-                        () -> System.out.println("\u001B[31m[WARN] BedWars1058 may drop support for this server version in the future.\nSee: https://wiki.andrei1058.dev/docs/BedWars1058/compatibility \u001B[0m"), 40L);
-                break;
-        }
+        registerEvents(new InvisibilityPotionListener());
 
         /* Load join signs. */
         loadArenasAndSigns();
@@ -449,14 +416,14 @@ public class BedWars extends JavaPlugin {
                 try {
                     //noinspection rawtypes
                     RegisteredServiceProvider rsp = this.getServer().getServicesManager().getRegistration(net.milkbowl.vault.chat.Chat.class);
-                   if(rsp != null) {
-                       WithChat.setChat((net.milkbowl.vault.chat.Chat) rsp.getProvider());
-                       plugin.getLogger().info("Hooked into vault chat support!");
-                       chat = new WithChat();
-                   } else {
-                       plugin.getLogger().info("Vault found, but no chat provider!");
-                       chat = new NoChat();
-                   }
+                    if (rsp != null) {
+                        WithChat.setChat((net.milkbowl.vault.chat.Chat) rsp.getProvider());
+                        plugin.getLogger().info("Hooked into vault chat support!");
+                        chat = new WithChat();
+                    } else {
+                        plugin.getLogger().info("Vault found, but no chat provider!");
+                        chat = new NoChat();
+                    }
                 } catch (Exception var2_2) {
                     chat = new NoChat();
                 }
@@ -486,7 +453,10 @@ public class BedWars extends JavaPlugin {
         }
 
         /* Protect glass walls from tnt explosion */
-        nms.registerTntWhitelist();
+        nms.registerTntWhitelist(
+                (float) config.getDouble(ConfigPath.GENERAL_TNT_PROTECTION_END_STONE_BLAST),
+                (float) config.getDouble(ConfigPath.GENERAL_TNT_PROTECTION_GLASS_BLAST)
+        );
 
         /* Prevent issues on reload */
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -534,14 +504,19 @@ public class BedWars extends JavaPlugin {
             }
         }
 
-        /* Check updates */
-        new SpigotUpdater(this, 50942, true).checkUpdate();
-
-
         Bukkit.getScheduler().runTaskLater(this, () -> getLogger().info("This server is running in " + getServerType().toString() + " with auto-scale " + autoscale), 100L);
 
         // Initialize team upgrades
         com.andrei1058.bedwars.upgrades.UpgradesManager.init();
+
+        // Initialize sidebar manager
+        if (SidebarService.init()) {
+            this.getLogger().info("Initializing SidebarLib by andrei1058");
+        } else {
+            this.getLogger().severe("SidebarLib by andrei1058 does not support your server version");
+            Bukkit.getPluginManager().disablePlugin(this);
+            return;
+        }
 
         int playerListRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_LIST_REFRESH);
         if (playerListRefreshInterval < 1) {
@@ -552,7 +527,7 @@ public class BedWars extends JavaPlugin {
                 Bukkit.getLogger().warning("It is not recommended to use a value under 20 ticks.");
                 Bukkit.getLogger().warning("If you expect performance issues please increase its timer.");
             }
-            Bukkit.getScheduler().runTaskTimer(this, new SidebarListRefresh(), 23L, playerListRefreshInterval);
+            Bukkit.getScheduler().runTaskTimer(this, new RefreshTabListTask(), 23L, playerListRefreshInterval);
         }
 
         int placeholdersRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_PLACEHOLDERS_REFRESH_INTERVAL);
@@ -564,7 +539,7 @@ public class BedWars extends JavaPlugin {
                 Bukkit.getLogger().warning("It is not recommended to use a value under 20 ticks.");
                 Bukkit.getLogger().warning("If you expect performance issues please increase its timer.");
             }
-            Bukkit.getScheduler().runTaskTimer(this, new SidebarPlaceholderRefresh(), 28L, placeholdersRefreshInterval);
+            Bukkit.getScheduler().runTaskTimer(this, new RefreshPlaceholdersTask(), 28L, placeholdersRefreshInterval);
         }
 
         int titleRefreshInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_TITLE_REFRESH_INTERVAL);
@@ -575,7 +550,7 @@ public class BedWars extends JavaPlugin {
                 Bukkit.getLogger().warning("Scoreboard title refresh interval is set to: " + titleRefreshInterval);
                 Bukkit.getLogger().warning("If you expect performance issues please increase its timer.");
             }
-            Bukkit.getScheduler().runTaskTimerAsynchronously(this, new SidebarTitleRefresh(), 32L, titleRefreshInterval);
+            Bukkit.getScheduler().runTaskTimerAsynchronously(this, new RefreshTitleTask(), 32L, titleRefreshInterval);
         }
 
         int healthAnimationInterval = config.getInt(ConfigPath.SB_CONFIG_SIDEBAR_HEALTH_REFRESH);
@@ -587,15 +562,79 @@ public class BedWars extends JavaPlugin {
                 Bukkit.getLogger().warning("It is not recommended to use a value under 20 ticks.");
                 Bukkit.getLogger().warning("If you expect performance issues please increase its timer.");
             }
-            Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new SidebarLifeRefresh(), 40L, healthAnimationInterval);
+            Bukkit.getScheduler().scheduleSyncRepeatingTask(this, new RefreshLifeTask(), 40L, healthAnimationInterval);
         }
 
         registerEvents(new ScoreboardListener());
 
-        // Halloween Special
-        HalloweenSpecial.init();
+        if (config.getBoolean(ConfigPath.GENERAL_CONFIGURATION_ENABLE_HALLOWEEN)) {
+            // Halloween Special
+            HalloweenSpecial.init();
+        }
 
         SpoilPlayerTNTFeature.init();
+    }
+
+    /**
+     * Try loading custom adapter support.
+     * @return true when custom adapter was registered.
+     */
+    private boolean handleWorldAdapter() {
+        Plugin swmPlugin = Bukkit.getPluginManager().getPlugin("SlimeWorldManager");
+
+        if (null == swmPlugin){
+            return false;
+        }
+        PluginDescriptionFile pluginDescription = swmPlugin.getDescription();
+        if (null == pluginDescription) {
+            return false;
+        }
+
+        String[] versionString = pluginDescription.getVersion().split("\\.");
+
+
+        try {
+            int major = Integer.parseInt(versionString[0]);
+            int minor = Integer.parseInt(versionString[1]);
+            int release = versionString.length > 3 ? Integer.parseInt(versionString[3]) : 0;
+
+            String adapterPath;
+            if (major == 2 && minor == 2 && release == 1) {
+                adapterPath = "com.andrei1058.bedwars.arena.mapreset.slime.SlimeAdapter";
+            } else if (major == 2 && minor == 8 && release == 0) {
+                adapterPath = "com.andrei1058.bedwars.arena.mapreset.slime.AdvancedSlimeAdapter";
+            } else if (major > 2 || major == 2 && minor >= 10) {
+                adapterPath = "com.andrei1058.bedwars.arena.mapreset.slime.SlimePaperAdapter";
+            } else {
+                return false;
+            }
+
+            Constructor<?> constructor = Class.forName(adapterPath).getConstructor(Plugin.class);
+            getLogger().info("Loading restore adapter: "+adapterPath+" ...");
+
+            RestoreAdapter candidate = (RestoreAdapter) constructor.newInstance(this);
+            api.setRestoreAdapter(candidate);
+            getLogger().info("Hook into "+candidate.getDisplayName()+" as restore adapter.");
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            this.getLogger().info("Something went wrong! Using internal reset adapter...");
+        }
+        return false;
+    }
+
+    private void registerDelayedCommands() {
+        if (!nms.isBukkitCommandRegistered("shout")) {
+            nms.registerCommand("shout", new ShoutCommand("shout"));
+        }
+        nms.registerCommand("rejoin", new RejoinCommand("rejoin"));
+        if (!(nms.isBukkitCommandRegistered("leave") && getServerType() == ServerType.BUNGEE)) {
+            nms.registerCommand("leave", new LeaveCommand("leave"));
+        }
+        if (getServerType() != ServerType.BUNGEE && config.getBoolean(ConfigPath.GENERAL_ENABLE_PARTY_CMD)) {
+            Bukkit.getLogger().info("Registering /party command..");
+            nms.registerCommand("party", new PartyCommand("party"));
+        }
     }
 
     public void onDisable() {
@@ -674,10 +713,6 @@ public class BedWars extends JavaPlugin {
         switch (getServerVersion()) {
             case "v1_8_R3":
                 return v18;
-            case "v1_9_R1":
-            case "v1_9_R2":
-            case "v1_10_R1":
-            case "v1_11_R1":
             case "v1_12_R1":
                 return v12;
         }
@@ -764,41 +799,6 @@ public class BedWars extends JavaPlugin {
 
     public static com.andrei1058.bedwars.api.BedWars getAPI() {
         return api;
-    }
-
-    /**
-     * This is used to check if can hook in SlimeWorldManager support.
-     *
-     * @return true if can load swm support.
-     */
-    private boolean checkSWM() {
-        Plugin plugin = Bukkit.getPluginManager().getPlugin("SlimeWorldManager");
-        if (plugin == null) return false;
-        switch (plugin.getDescription().getVersion()) {
-            case "2.2.0":
-            case "2.1.3":
-            case "2.1.2":
-            case "2.1.1":
-            case "2.1.0":
-            case "2.0.5":
-            case "2.0.4":
-            case "2.0.3":
-            case "2.0.2":
-            case "2.0.1":
-            case "2.0.0":
-            case "1.1.4":
-            case "1.1.3":
-            case "1.1.2":
-            case "1.1.1":
-            case "1.1.0":
-            case "1.0.2":
-            case "1.0.1":
-            case "1.0.0-BETA":
-                getLogger().warning("Could not hook into SlimeWorldManager support! You are running an unsupported version");
-                return false;
-            default:
-                return true;
-        }
     }
 
     public static boolean isShuttingDown() {

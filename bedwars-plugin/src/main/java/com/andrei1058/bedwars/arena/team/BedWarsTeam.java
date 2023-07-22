@@ -37,6 +37,7 @@ import com.andrei1058.bedwars.arena.Arena;
 import com.andrei1058.bedwars.arena.OreGenerator;
 import com.andrei1058.bedwars.configuration.Sounds;
 import com.andrei1058.bedwars.shop.ShopCache;
+import com.andrei1058.bedwars.support.paper.PaperSupport;
 import org.bukkit.*;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ArmorStand;
@@ -141,7 +142,7 @@ public class BedWarsTeam implements ITeam {
      */
     public void firstSpawn(Player p) {
         if (p == null) return;
-        p.teleport(spawn, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        PaperSupport.teleportC(p, spawn, PlayerTeleportEvent.TeleportCause.PLUGIN);
         p.setGameMode(GameMode.SURVIVAL);
         p.setCanPickupItems(true);
         nms.setCollide(p, getArena(), true);
@@ -339,22 +340,23 @@ public class BedWarsTeam implements ITeam {
         } else {
             reSpawnInvulnerability.put(p.getUniqueId(), System.currentTimeMillis() + config.getInt(ConfigPath.GENERAL_CONFIGURATION_RE_SPAWN_INVULNERABILITY));
         }
-        p.teleport(getSpawn(), PlayerTeleportEvent.TeleportCause.PLUGIN);
+        PaperSupport.teleportC(p, getSpawn(), PlayerTeleportEvent.TeleportCause.PLUGIN);
         p.setVelocity(new Vector(0, 0, 0));
-        getArena().getRespawnSessions().remove(p);
         p.removePotionEffect(PotionEffectType.INVISIBILITY);
         nms.setCollide(p, arena, true);
         p.setAllowFlight(false);
         p.setFlying(false);
         p.setHealth(20);
 
-        Bukkit.getScheduler().runTaskLater(plugin, ()-> {
-            for (Player inGame : arena.getPlayers()){
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            getArena().getRespawnSessions().remove(p); //Fixes https://github.com/andrei1058/BedWars1058/issues/669
+
+            for (Player inGame : arena.getPlayers()) {
                 if (inGame.equals(p)) continue;
                 BedWars.nms.spigotShowPlayer(p, inGame);
                 BedWars.nms.spigotShowPlayer(inGame, p);
             }
-            for (Player spectator : arena.getSpectators()){
+            for (Player spectator : arena.getSpectators()) {
                 BedWars.nms.spigotShowPlayer(p, spectator);
             }
         }, 8L);
@@ -599,7 +601,7 @@ public class BedWarsTeam implements ITeam {
         for (Player p : getMembers()) {
             for (ItemStack i : p.getInventory().getContents()) {
                 if (i == null) continue;
-                if (nms.isSword(i)) {
+                if (nms.isSword(i) || nms.isAxe(i)) {
                     ItemMeta im = i.getItemMeta();
                     im.addEnchant(e, a, true);
                     i.setItemMeta(im);
@@ -865,6 +867,18 @@ public class BedWarsTeam implements ITeam {
             return;
         }
         this.killDropsLoc = new Vector(loc.getBlockX() + 0.5, loc.getBlockY(), loc.getBlockZ() + 0.5);
+    }
+
+    @Override
+    public boolean isBed(@NotNull Location location) {
+        for (int x = location.getBlockX() - 1; x < location.getBlockX() + 1; x++) {
+            for (int z = location.getBlockZ() - 1; z < location.getBlockZ() + 1; z++) {
+                if (getBed().getBlockX() == x && getBed().getBlockY() == location.getBlockY() && getBed().getBlockZ() == z) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void setKillDropsLocation(Location loc) {

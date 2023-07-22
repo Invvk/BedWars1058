@@ -129,9 +129,7 @@ public class InternalAdapter extends RestoreAdapter {
             Bukkit.unloadWorld(a.getWorldName(), false);
             return;
         }
-        Bukkit.getScheduler().runTask(getOwner(), () -> {
-            Bukkit.unloadWorld(a.getWorldName(), false);
-        });
+        Bukkit.getScheduler().runTask(getOwner(), () -> Bukkit.unloadWorld(a.getWorldName(), false));
     }
 
     @Override
@@ -322,6 +320,11 @@ public class InternalAdapter extends RestoreAdapter {
                 }
             }
         });
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Internal Restore Adapter";
     }
 
     private void deleteWorldTrash(String world) {

@@ -70,6 +70,7 @@ public class ConfigPath {
     public static final String GENERAL_CONFIGURATION_BUNGEE_OPTION_BWP_TIME_OUT = "bungee-settings.bwp-time-out";
 
     public static final String GENERAL_CONFIGURATION_ALLOW_FIRE_EXTINGUISH = "allow-fire-extinguish";
+    public static final String GENERAL_CONFIGURATION_ENABLE_HALLOWEEN = "enable-halloween-feature";
 
     public static final String GENERAL_CONFIGURATION_LOBBY_ITEMS_PATH = "lobby-items";
     public static final String GENERAL_CONFIGURATION_EXPERIMENTAL_TEAM_ASSIGNER = "use-experimental-team-assigner";
@@ -210,6 +211,15 @@ public class ConfigPath {
     public static final String GENERAL_TNT_JUMP_DAMAGE_TEAMMATES = GENERAL_TNT_JUMP_PATH + ".damage-teammates";
     public static final String GENERAL_TNT_JUMP_DAMAGE_OTHERS = GENERAL_TNT_JUMP_PATH + ".damage-others";
 
+    public static final String GENERAL_TNT_BLAST_PROTECTION = "blast-protection";
+    public static final String GENERAL_TNT_PROTECTION_END_STONE_BLAST = GENERAL_TNT_BLAST_PROTECTION+".end-stone";
+    public static final String GENERAL_TNT_PROTECTION_GLASS_BLAST = GENERAL_TNT_BLAST_PROTECTION+".glass";
+    public static final String GENERAL_TNT_RAY_BLOCKED_BY_GLASS = GENERAL_TNT_BLAST_PROTECTION+".ray-blocked-by-glass";
+
+    public static final String GENERAL_TNT_PRIME = "tnt-prime-settings";
+    public static final String GENERAL_TNT_AUTO_IGNITE = GENERAL_TNT_PRIME+".auto-ignite";
+    public static final String GENERAL_TNT_FUSE_TICKS = GENERAL_TNT_PRIME+".fuse-ticks";
+
     private static final String GENERAL_FIREBALL_PATH = "fireball";
     public static final String GENERAL_FIREBALL_EXPLOSION_SIZE = GENERAL_FIREBALL_PATH + ".explosion-size";
     public static final String GENERAL_FIREBALL_SPEED_MULTIPLIER = GENERAL_FIREBALL_PATH + ".speed-multiplier";
@@ -228,10 +238,17 @@ public class ConfigPath {
     public static final String GENERAL_CONFIGURATION_PERFORMANCE_ROTATE_GEN = GENERAL_CONFIGURATION_PERFORMANCE_PATH + ".rotate-generators";
     public static final String GENERAL_CONFIGURATION_PERFORMANCE_SPOIL_TNT_PLAYERS = GENERAL_CONFIGURATION_PERFORMANCE_PATH + ".spoil-tnt-players";
 
+    public static final String GENERAL_CONFIGURATION_PERFORMANCE_PAPER_FEATURES = GENERAL_CONFIGURATION_PERFORMANCE_PATH + ".paper-features";
+
+    private static final String GENERAL_CONFIGURATION_HEAL_POOL = GENERAL_CONFIGURATION_PERFORMANCE_PATH+".heal-pool";
+    public static final String GENERAL_CONFIGURATION_HEAL_POOL_ENABLE = GENERAL_CONFIGURATION_HEAL_POOL+".enable";
+    public static final String GENERAL_CONFIGURATION_HEAL_POOL_SEEN_TEAM_ONLY = GENERAL_CONFIGURATION_HEAL_POOL+".seen-by-team-only";
     public static final String SHOP_SETTINGS_PATH = "shop-settings";
     public static final String SHOP_SPECIALS_PATH = "shop-specials";
     public static final String SHOP_QUICK_DEFAULTS_PATH = "quick-buy-defaults";
 
+    public static final String SHOP_SPECIAL_TOWER_ENABLE = SHOP_SPECIALS_PATH + ".tower.enable";
+    public static final String SHOP_SPECIAL_TOWER_MATERIAL = SHOP_SPECIALS_PATH + ".tower.material";
     public static final String SHOP_SPECIAL_SILVERFISH_ENABLE = SHOP_SPECIALS_PATH + ".silverfish.enable";
     public static final String SHOP_SPECIAL_SILVERFISH_MATERIAL = SHOP_SPECIALS_PATH + ".silverfish.material";
     public static final String SHOP_SPECIAL_SILVERFISH_DATA = SHOP_SPECIALS_PATH + ".silverfish.data";
@@ -290,6 +307,7 @@ public class ConfigPath {
     public static final String SHOP_CATEGORY_CONTENT_CONTENT_SLOT = "content-settings.content-slot";
     public static final String SHOP_CATEGORY_CONTENT_IS_PERMANENT = "content-settings.is-permanent";
     public static final String SHOP_CATEGORY_CONTENT_IS_DOWNGRADABLE = "content-settings.is-downgradable";
+    public static final String SHOP_CATEGORY_CONTENT_IS_UNBREAKABLE = "content-settings.is-unbreakable";
     public static final String SHOP_CATEGORY_CONTENT_WEIGHT = "content-settings.weight";
     public static final String SHOP_CATEGORY_CONTENT_CONTENT_TIERS = "content-tiers";
     public static final String SHOP_CATEGORY_CONTENT_PATH = ".category-content";
@@ -303,4 +321,7 @@ public class ConfigPath {
     public static final String SHOP_PATH_CATEGORY_UTILITY = "utility-category";
 
     public static final String TEAM_NAME_PATH = "team-name-{arena}-{team}";
+
+    public static final String LOBBY_VOID_TELEPORT_ENABLED = "lobby-settings.void-tp";
+    public static final String LOBBY_VOID_TELEPORT_HEIGHT = "lobby-settings.void-height";
 }
